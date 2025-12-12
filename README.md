@@ -4,7 +4,7 @@ Watch `xscreensaver` and suspend the PC 30mins after screen power down
 
 There's prob a better way to do this, but I couldn't find it.
 
-This program will `watch` `xscreensaver` and issue a `systemctl suspend` command
+This program will `--watch` `xscreensaver` and issue a `systemctl suspend` command
 30 mins after seeing `xscreensaver` has powered down the screens.
 
 Any event it sees other than powering down the screens will cause it to
