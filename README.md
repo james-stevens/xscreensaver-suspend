@@ -1,6 +1,6 @@
 # xscreensaver-suspend
 
-Watch `xscreensaver` and suspend the PC <N> seconds after screen power down
+Watch `xscreensaver` and suspend the PC 30mins after screen power down
 
 There's prob a better way to do this, but I couldn't find it.
 
