@@ -26,6 +26,6 @@ or just start it in the background with `./xscreensaver-suspend &`.
 
 ## Build
 
-If you have `gcc` install, it should just buuld when you run `make`.
+If you have `gcc` install, it should just build when you run `make`.
 
 It's very simple and only uses std *nix stuff, so shouldn't need a `configure` to compile.
