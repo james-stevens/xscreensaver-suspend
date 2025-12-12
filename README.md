@@ -2,7 +2,8 @@
 
 Watch `xscreensaver` and suspend the PC 30mins after screen power down
 
-There's prob a better way to do this, but I couldn't find it.
+There's prob a better way to do this, but I couldn't find it. It's a shame `xscreensaver`
+doesn't have this built-in.
 
 This program will `--watch` `xscreensaver` and issue a `systemctl suspend` command
 30 mins after seeing `xscreensaver` has powered down the screens.
@@ -29,3 +30,6 @@ or just start it in the background with `./xscreensaver-suspend &`.
 If you have `gcc` install, it should just build when you run `make`.
 
 It's very simple and only uses std *nix stuff, so shouldn't need a `configure` to compile.
+
+It will take virtually zero CPU during usage as it's spends most of it's life waiting for
+messages from `xscreensaver`.
