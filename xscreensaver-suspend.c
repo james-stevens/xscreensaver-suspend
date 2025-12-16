@@ -21,9 +21,11 @@ void sig(int s)
 	syslog(LOG_INFO,"signal %d",s);
 	if (s!=SIGALRM) { interupt=s; return; }
 
-	is_system_running = 0;
-	pclose(p); p = NULL;
 	alarm(0);
+
+	pclose(p); p = NULL;
+	is_system_running = 0;
+
 	syslog(LOG_INFO,"SIGALRM - Running '%s'",suspend_command);
 	system(suspend_command);
 }
@@ -67,15 +69,19 @@ int time_to_suspend = 60*30;
 	openlog("xscreensaver-suspend",LOG_PID,LOG_USER);
 
 	while(!interupt) {
-		if (!p) {
-			int ret = system("systemctl is-system-running");
+		while (!p) {
+			int ret = system("systemctl is-system-running | logger -t xscreensaver-suspend -i");
 			if (ret >= 0) is_system_running++;
-			syslog(LOG_INFO,"is-system-running %d, ret=%d\n",is_system_running,ret);
+			syslog(LOG_INFO,"is-system-running %d of %d, ret=%d\n",is_system_running,NEED_SYSTEM_RUNNING,ret);
 			if (is_system_running >= NEED_SYSTEM_RUNNING)
 				p = popen("exec xscreensaver-command --watch","r");
+			sleep(1);
 			}
 
-		while(fgets(line,sizeof(line),p)!=NULL) {
+		if (!p) continue;
+
+		syslog(LOG_INFO,"looping");
+		while((p)&&(fgets(line,sizeof(line),p)!=NULL)) {
 			syslog(LOG_INFO,"%s",line);
 			if (strncmp(line,"RUN 0 ",6)==0) {
 				alarm(time_to_suspend);
@@ -86,7 +92,8 @@ int time_to_suspend = 60*30;
 				if (i) syslog(LOG_INFO,"alarm cancelled with %d secs left",i);
 				}
 			}
-		pclose(p);
+
+		if (p) { pclose(p); p = NULL; is_system_running = 0; }
 		}
 	return 0;
 }
