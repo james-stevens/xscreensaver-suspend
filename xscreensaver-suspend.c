@@ -8,6 +8,11 @@
 #define ZERO(A) memset(&A,0,sizeof(A))
 char suspend_command[250];
 
+int is_system_running = 0;
+#define NEED_SYSTEM_RUNNING 3
+
+
+FILE *p = NULL;
 
 
 int interupt=0;
@@ -15,6 +20,8 @@ void sig(int s)
 { 
 	if (s!=SIGALRM) { interupt=1; return; }
 
+	is_system_running = 0;
+	pclose(p); p = NULL;
 	alarm(0);
 	syslog(LOG_INFO,"SIGALRM - Running '%s'",suspend_command);
 	system(suspend_command);
@@ -33,17 +40,16 @@ int usage()
 
 int main(int argc, char * argv[])
 {
-FILE *p = NULL;
 char line[200];
 struct sigaction sa;
 int time_to_suspend = 60*30;
 
-	signal(SIGPIPE,SIG_IGN);
 	ZERO(sa);
 	sa.sa_handler = sig;
 	sigaction(SIGALRM,&sa,NULL);
 	sigaction(SIGINT,&sa,NULL);
 	sigaction(SIGTERM,&sa,NULL);
+	sigaction(SIGPIPE,&sa,NULL);
 	strcpy(suspend_command,"systemctl suspend");
 
     int opt;
@@ -60,7 +66,14 @@ int time_to_suspend = 60*30;
 	openlog("xscreensaver-suspend",LOG_PID,LOG_USER);
 
 	while(!interupt) {
-		if ((p = popen("exec xscreensaver-command --watch","r"))==NULL) break;
+		if (!p) {
+			int ret = system("systemctl is-system-running");
+			if (ret >= 0) is_system_running++;
+			syslog(LOG_INFO,"is-system-running %d, ret=%d\n",is_system_running,ret);
+			if (is_system_running >= NEED_SYSTEM_RUNNING)
+				p = popen("exec xscreensaver-command --watch","r");
+			}
+
 		while(fgets(line,sizeof(line),p)!=NULL) {
 			syslog(LOG_INFO,"%s",line);
 			if (strncmp(line,"RUN 0 ",6)==0) {
