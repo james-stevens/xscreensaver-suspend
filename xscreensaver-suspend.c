@@ -18,7 +18,8 @@ FILE *p = NULL;
 int interupt=0;
 void sig(int s)
 { 
-	if (s!=SIGALRM) { interupt=1; return; }
+	syslog(LOG_INFO,"signal %d",s);
+	if (s!=SIGALRM) { interupt=s; return; }
 
 	is_system_running = 0;
 	pclose(p); p = NULL;
