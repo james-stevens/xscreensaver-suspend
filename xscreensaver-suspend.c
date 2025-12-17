@@ -4,12 +4,13 @@
 #include <string.h>
 #include <syslog.h>
 #include <signal.h>
+#include <errno.h>
 
 #define ZERO(A) memset(&A,0,sizeof(A))
 char suspend_command[250];
 
 int is_system_running = 0;
-#define NEED_SYSTEM_RUNNING 3
+#define NEED_SYSTEM_RUNNING 2
 
 
 FILE *p = NULL;
@@ -21,13 +22,18 @@ void sig(int s)
 	syslog(LOG_INFO,"signal %d",s);
 	if (s!=SIGALRM) { interupt=s; return; }
 
+	system("exec killall xscreensaver-command");
+	sleep(1);
+
 	alarm(0);
+
+	syslog(LOG_INFO,"SIGALRM - Running '%s'",suspend_command);
 
 	pclose(p); p = NULL;
 	is_system_running = 0;
 
-	syslog(LOG_INFO,"SIGALRM - Running '%s'",suspend_command);
 	system(suspend_command);
+	sleep(1);
 }
 
 
@@ -52,8 +58,7 @@ int time_to_suspend = 60*30;
 	sigaction(SIGALRM,&sa,NULL);
 	sigaction(SIGINT,&sa,NULL);
 	sigaction(SIGTERM,&sa,NULL);
-	sigaction(SIGPIPE,&sa,NULL);
-	strcpy(suspend_command,"systemctl suspend");
+	strcpy(suspend_command,"exec systemctl suspend");
 
     int opt;
     while ((opt=getopt(argc,argv,"t:s:")) > 0)
@@ -71,10 +76,13 @@ int time_to_suspend = 60*30;
 	while(!interupt) {
 		while (!p) {
 			int ret = system("systemctl is-system-running | logger -t xscreensaver-suspend -i");
-			if (ret >= 0) is_system_running++;
+			if (ret >= 0) is_system_running++; else is_system_running=0;
 			syslog(LOG_INFO,"is-system-running %d of %d, ret=%d\n",is_system_running,NEED_SYSTEM_RUNNING,ret);
-			if (is_system_running >= NEED_SYSTEM_RUNNING)
-				p = popen("exec xscreensaver-command --watch","r");
+			if (is_system_running >= NEED_SYSTEM_RUNNING) {
+				syslog(LOG_INFO,"opening pipe");
+				p = popen("xscreensaver-command --watch","r");
+				syslog(LOG_INFO,"pipe result: %s",strerror(errno));
+				}
 			sleep(1);
 			}
 
