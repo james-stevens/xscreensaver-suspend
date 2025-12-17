@@ -22,6 +22,7 @@ void sig(int s)
 	syslog(LOG_INFO,"signal %d",s);
 	if (s!=SIGALRM) { interupt=s; return; }
 
+	// pclose() doesn't seem to be able to terminate `xscreensaver-command`, needs more testing, but this def fixed it
 	system("exec killall xscreensaver-command");
 	sleep(1);
 
@@ -80,6 +81,7 @@ int time_to_suspend = 60*30;
 			syslog(LOG_INFO,"is-system-running %d of %d, ret=%d\n",is_system_running,NEED_SYSTEM_RUNNING,ret);
 			if (is_system_running >= NEED_SYSTEM_RUNNING) {
 				syslog(LOG_INFO,"opening pipe");
+				// adding `exec` here might cause an issue, it might be relying on the shell to terminate `xscreensaver-command`
 				p = popen("xscreensaver-command --watch","r");
 				syslog(LOG_INFO,"pipe result: %s",strerror(errno));
 				}
