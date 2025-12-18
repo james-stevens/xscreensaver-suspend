@@ -64,7 +64,7 @@ void sig(int s)
 
 	kill_watch_by_pid();
 	alarm(0);
-	syslog(LOG_INFO,"SIGALRM - Running '%s'",SUSPEND_COMMAND);
+	syslog(LOG_NOTICE,"SIGALRM - Running '%s'",SUSPEND_COMMAND);
 	pclose(watch_pipe); watch_pipe = NULL;
 	is_system_running = 0;
 	system(SUSPEND_COMMAND);
@@ -75,8 +75,9 @@ void sig(int s)
 
 int usage()
 {
-	puts("xscreensaver-suspend [ -t <secs-after-monitor-power-off> ] &");
-	puts("default: 30mins");
+	puts("xscreensaver-suspend [ -t <secs-after-monitor-stand-by> ] [ -l <log-up-to> ] &");
+	puts("    default: suspend 30mins after monitor stand-by, log everything");
+	puts("    use `-l 5` to only log significant state changes");
 	exit(0);
 }
 
@@ -88,6 +89,8 @@ char line[200];
 struct sigaction sa;
 int time_to_suspend = 60*30;
 
+	openlog("xscreensaver-suspend",LOG_PID,LOG_USER);
+
 	ZERO(sa);
 	sa.sa_handler = sig;
 	sigaction(SIGALRM,&sa,NULL);
@@ -95,16 +98,15 @@ int time_to_suspend = 60*30;
 	sigaction(SIGTERM,&sa,NULL);
 
     int opt;
-    while ((opt=getopt(argc,argv,"t:")) > 0)
+    while ((opt=getopt(argc,argv,"t:l:")) > 0)
         {
         switch(opt)
             {
+            case 'l': LOG_UPTO(atoi(optarg)); break;
             case 't': time_to_suspend = atoi(optarg); break;
             default: usage(); exit(0);
             }
 		}
-
-	openlog("xscreensaver-suspend",LOG_PID,LOG_USER);
 
 	while(!interupt) {
 		while ((!interupt)&&(!watch_pipe)) {
@@ -123,14 +125,14 @@ int time_to_suspend = 60*30;
 
 		syslog(LOG_DEBUG,"looping");
 		while((!interupt)&&(watch_pipe)&&(fgets(line,sizeof(line),watch_pipe)!=NULL)) {
-			syslog(LOG_DEBUG,"%s",line);
+			syslog(LOG_DEBUG,"xscreensaver reported '%s'",line);
 			if (strncmp(line,"RUN 0 ",6)==0) {
 				alarm(time_to_suspend);
-				syslog(LOG_INFO,"suspend in %d secs",time_to_suspend);
+				syslog(LOG_NOTICE,"suspend in %d secs",time_to_suspend);
 				}
 			else {
 				int i = alarm(0);
-				if (i) syslog(LOG_INFO,"alarm cancelled with %d secs left",i);
+				if (i) syslog(LOG_NOTICE,"alarm cancelled with %d secs left",i);
 				}
 			}
 

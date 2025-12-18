@@ -21,8 +21,9 @@ Obv, requires you have stand-by enabled in "Display Power Managment" in `xscreen
 
 ## Usage
 ```
-xscreensaver-suspend [ -t <secs-after-monitor-stand-by> ]
-default: 30mins
+xscreensaver-suspend [ -t <secs-after-monitor-stand-by> ] [ -l <log-up-to> ] &
+    default: suspend 30mins after monitor stand-by, log everything
+    use `-l 5` to only log significant state changes
 ```
 
 To run it either configure your system to automatically start it when you login,
