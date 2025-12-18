@@ -37,3 +37,11 @@ It's very simple and only uses std *nix stuff, so shouldn't need a `configure` t
 
 It will take virtually zero CPU during usage as it's spends most of it's life waiting for
 messages from `xscreensaver`.
+
+## Note on `xscreensaver-command --watch`
+
+Normally, one would expect a process in a pipe to termiate itself when it's STDIN is closed.
+
+`xscreensaver-command --watch` does NOT do this, hence this program has to look for it in `/proc` and
+send it a `SIGTERM`. This is not a big deal and debatable if its a bug, but it does mean about double
+the lines of code!
