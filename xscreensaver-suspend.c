@@ -10,9 +10,9 @@
 #include <ctype.h>
 #include <sys/types.h>
 
+#define SUSPEND_COMMAND "exec systemctl suspend"
 
 #define ZERO(A) memset(&A,0,sizeof(A))
-char suspend_command[250];
 
 int is_system_running = 0;
 #define NEED_SYSTEM_RUNNING 2
@@ -64,10 +64,10 @@ void sig(int s)
 
 	kill_watch_by_pid();
 	alarm(0);
-	syslog(LOG_INFO,"SIGALRM - Running '%s'",suspend_command);
+	syslog(LOG_INFO,"SIGALRM - Running '%s'",SUSPEND_COMMAND);
 	pclose(watch_pipe); watch_pipe = NULL;
 	is_system_running = 0;
-	system(suspend_command);
+	system(SUSPEND_COMMAND);
 	sleep(1);
 }
 
@@ -75,8 +75,8 @@ void sig(int s)
 
 int usage()
 {
-	puts("xscreensaver-suspend [ -t <secs-after-monitor-power-off> ] [ -s <suspend-command> ]");
-	puts("default: 30mins & 'systemctl suspend'");
+	puts("xscreensaver-suspend [ -t <secs-after-monitor-power-off> ] &");
+	puts("default: 30mins");
 	exit(0);
 }
 
@@ -93,15 +93,13 @@ int time_to_suspend = 60*30;
 	sigaction(SIGALRM,&sa,NULL);
 	sigaction(SIGINT,&sa,NULL);
 	sigaction(SIGTERM,&sa,NULL);
-	strcpy(suspend_command,"exec systemctl suspend");
 
     int opt;
-    while ((opt=getopt(argc,argv,"t:s:")) > 0)
+    while ((opt=getopt(argc,argv,"t:")) > 0)
         {
         switch(opt)
             {
             case 't': time_to_suspend = atoi(optarg); break;
-            case 's': strcpy(suspend_command,optarg); break;
             default: usage(); exit(0);
             }
 		}
