@@ -1,27 +1,31 @@
 # xscreensaver-suspend
 
-Watch `xscreensaver` and suspend the PC 30mins after screen power down
+Watch `xscreensaver` and suspend the PC 30mins after the screen is put into stand-by.
 
 There's prob a better way to do this, but I couldn't find it. It's a shame `xscreensaver`
 doesn't have this built-in.
 
-This program will `--watch` `xscreensaver` and issue a `systemctl suspend` command
-30 mins after seeing `xscreensaver` has powered down the screens.
+This program will run `xscreensaver-command --watch` and issue a `systemctl suspend` command
+30 mins after seeing `xscreensaver` has put the screen into stand-by.
 
-Any event it sees other than powering down the screens will cause it to
+Any event it sees other than putting the screen into stand-by will cause it to
 cancel the suspend.
 
 Logs everything it sees & does to `syslog`
 
-Obv, requires you have power-down enabled in "Display Power Managment" in `xscreensaver` "Advanced" settings.
+Uses `systemctl is-system-running` to detect when it has come back from a suspend event.
+Technically, the `systemctl suspend` actually blocks until the system wakes from the suspend, 
+but using `systemctl is-system-running` means it can check everything is back & working.
+
+Obv, requires you have stand-by enabled in "Display Power Managment" in `xscreensaver` "Advanced" settings.
 
 ## Usage
 ```
-xscreensaver-suspend [ -t <secs-after-monitor-power-off> ] [ -s <suspend-command> ]
-default: 30mins & 'systemctl suspend'
+xscreensaver-suspend [ -t <secs-after-monitor-stand-by> ]
+default: 30mins
 ```
 
-To use this, configure your system to automatically start it when you login,
+To run it either configure your system to automatically start it when you login,
 or just start it in the background with `./xscreensaver-suspend &`.
 
 
