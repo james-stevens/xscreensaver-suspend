@@ -111,6 +111,7 @@ int time_to_suspend = 60*30;
 			int ret = system("systemctl is-system-running | logger -t xscreensaver-suspend -i");
 			if (ret >= 0) is_system_running++; else is_system_running=0;
 			syslog(LOG_DEBUG,"is-system-running %d of %d, ret=%d\n",is_system_running,NEED_SYSTEM_RUNNING,ret);
+
 			if (is_system_running >= NEED_SYSTEM_RUNNING) {
 				watch_pipe = popen("exec xscreensaver-command --watch","r");
 				syslog(LOG_DEBUG,"pipe result: %s, watch_pipe is NULL -> %d",strerror(errno),(watch_pipe==NULL));
