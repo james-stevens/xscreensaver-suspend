@@ -59,7 +59,7 @@ char * parts[MAX_PARTS];
 int interupt=0;
 void sig(int s)
 { 
-	syslog(LOG_INFO,"signal %d",s);
+	syslog(LOG_DEBUG,"signal %d",s);
 	if (s!=SIGALRM) { interupt=s; return; }
 
 	kill_watch_by_pid();
@@ -110,21 +110,19 @@ int time_to_suspend = 60*30;
 		while (!watch_pipe) {
 			int ret = system("systemctl is-system-running | logger -t xscreensaver-suspend -i");
 			if (ret >= 0) is_system_running++; else is_system_running=0;
-			syslog(LOG_INFO,"is-system-running %d of %d, ret=%d\n",is_system_running,NEED_SYSTEM_RUNNING,ret);
+			syslog(LOG_DEBUG,"is-system-running %d of %d, ret=%d\n",is_system_running,NEED_SYSTEM_RUNNING,ret);
 			if (is_system_running >= NEED_SYSTEM_RUNNING) {
-				syslog(LOG_INFO,"opening pipe");
-				// adding `exec` here might cause an issue, it might be relying on the shell to terminate `xscreensaver-command`
 				watch_pipe = popen("exec xscreensaver-command --watch","r");
-				syslog(LOG_INFO,"pipe result: %s, watch_pipe is NULL -> %d",strerror(errno),(watch_pipe==NULL));
+				syslog(LOG_DEBUG,"pipe result: %s, watch_pipe is NULL -> %d",strerror(errno),(watch_pipe==NULL));
 				}
 			sleep(1);
 			}
 
 		if (!watch_pipe) continue;
 
-		syslog(LOG_INFO,"looping");
+		syslog(LOG_DEBUG,"looping");
 		while((watch_pipe)&&(fgets(line,sizeof(line),watch_pipe)!=NULL)) {
-			syslog(LOG_INFO,"%s",line);
+			syslog(LOG_DEBUG,"%s",line);
 			if (strncmp(line,"RUN 0 ",6)==0) {
 				alarm(time_to_suspend);
 				syslog(LOG_INFO,"suspend in %d secs",time_to_suspend);
