@@ -194,7 +194,7 @@ int time_to_suspend = 60*30;
 		if (ret < 0) { end_watcher(); continue; }
 
 		if (time(NULL) > now+(MAX_TIME_GAP)) {
-			syslog(LOG_DEBUG,"manaual suspend suspected\n");
+			syslog(LOG_DEBUG,"manual suspend suspected\n");
 			end_watcher();
 			continue; }
 
