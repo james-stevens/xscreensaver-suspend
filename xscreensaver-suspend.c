@@ -119,8 +119,8 @@ void sig(int s) { interupt=s; return; }
 void do_suspend()
 {
 	end_watcher();
-	syslog(LOG_NOTICE,"Running '%s'",SUSPEND_COMMAND);
-	system(SUSPEND_COMMAND);
+	syslog(LOG_NOTICE,"Suspending with '%s'",SUSPEND_COMMAND);
+	system(SUSPEND_COMMAND); // seems this call doesn't return until the PC wakes
 	sleep(1);
 }
 
@@ -194,7 +194,7 @@ int time_to_suspend = 60*30;
 		if (ret < 0) { end_watcher(); continue; }
 
 		if (time(NULL) > now+(MAX_TIME_GAP)) {
-			syslog(LOG_DEBUG,"manual suspend suspected\n");
+			syslog(LOG_NOTICE,"manual suspend suspected\n");
 			end_watcher();
 			continue; }
 
