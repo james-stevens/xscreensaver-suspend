@@ -1,7 +1,6 @@
 # xscreensaver-suspend
 
 Watch `xscreensaver` and suspend the PC 30mins after the screen is put into stand-by.
-
 There's prob a better way to do this, but I couldn't find it. It's a shame `xscreensaver`
 doesn't have this built-in.
 
@@ -19,12 +18,26 @@ but using `systemctl is-system-running` means it can check everything is back & 
 
 Obv, requires you have stand-by enabled in "Display Power Managment" in `xscreensaver` "Advanced" settings.
 
+It's external shell calls and the trigger event it looks for can be specified on the command line, 
+so this can be used for various other purposes, e.g.
+
+		./xscreensaver-suspend -t 5 -s "/usr/bin/make_coffee" -r "BLANK "
+
+Makes a cup of coffee 5 seconds after the screen goes into blank mode, as you clearly need waking up.
+
+You should be able to run as many occurances of this as you like. Each will run it's own watch on `xscreensaver`.
+
+The triggering on the event `UNBLANK ` can be used to take actions when the screen wakes from blank / screen-saver.
+
 ## Usage
 ```
-xscreensaver-suspend [ -t <secs-after-monitor-stand-by> ] [ -l <log-level> ] [ -w <watch-command> ] [ -e ] &
+xscreensaver-suspend &
     -t <secs> ... default: suspend 30mins after monitor stand-by
-    -l <log-level> ... use `-l 5` to only log significant state changes, LOG_NOTICE
-    -w <cmd> ... watch command is `exec xscreensaver-command --watch`, using other values is useful for debug only
+    -l <log-level> ... use `-l 5` to only log significant state changes, LOG_NOTICE & above
+    -w <cmd> ... watch command is `exec xscreensaver-command --watch`
+    -c <cmd> ... check command is `systemctl is-system-running`
+    -s <cmd> ... suspend command is `exec systemctl suspend`
+    -r <event> ... trigger event, default is `RUN 0 `
     -e ... also syslog to stderr
 ```
 

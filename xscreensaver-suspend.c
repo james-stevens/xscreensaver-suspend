@@ -12,7 +12,13 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#define STRCPY(D,S) strncpy(D,S,sizeof(D)-1)
 #define SUSPEND_COMMAND "exec systemctl suspend"
+#define CHECK_COMMAND "systemctl is-system-running | logger -t xscreensaver-suspend -i"
+#define WATCH_COMMAND "exec xscreensaver-command --watch"
+#define TRIGGER_EVENT "RUN 0 "
+
+char suspend_command[250],check_command[250],watch_command[250],trigger_event[250];
 
 #define ZERO(A) memset(&A,0,sizeof(A))
 
@@ -30,17 +36,17 @@ time_t supend_at = 0;
 char buf[MAXBUF],*end=buf;
 
 
-int have_run_zero()
+int check_trigger_event()
 {
 int ret = 0;
+int len_trig = strlen(trigger_event);
 
 	if (end == buf) return 0;
 	char *nxt,*pos = buf;
 	while ((pos < end)&&((nxt = strchr(pos,'\n'))!=NULL)) {
 		*nxt = 0;
 		syslog(LOG_DEBUG,"xscreensaver reported '%s'",pos);
-
-		if (strncmp(pos,"RUN 0 ",6)==0) ret = 1; else ret = 0;
+		if (strncmp(pos,trigger_event,len_trig)==0) ret = 1; else ret = 0;
 		pos = nxt+1;
 		}
 
@@ -119,8 +125,8 @@ void sig(int s) { interupt=s; return; }
 void do_suspend()
 {
 	end_watcher();
-	syslog(LOG_NOTICE,"Suspending with '%s'",SUSPEND_COMMAND);
-	system(SUSPEND_COMMAND); // seems this call doesn't return until the PC wakes
+	syslog(LOG_NOTICE,"Suspending with '%s'",suspend_command);
+	system(suspend_command); // seems this call doesn't return until the PC wakes
 	sleep(1);
 }
 
@@ -128,10 +134,13 @@ void do_suspend()
 
 int usage()
 {
-	puts("xscreensaver-suspend [ -t <secs-after-monitor-stand-by> ] [ -l <log-level> ] [ -w <watch-command> ] [ -e ] &");
+	puts("xscreensaver-suspend &");
 	puts("    -t <secs> ... default: suspend 30mins after monitor stand-by");
-	puts("    -l <log-level> ... use `-l 5` to only log significant state changes, LOG_NOTICE");
-	puts("    -w <cmd> ... watch command is `exec xscreensaver-command --watch`, using other values is useful for debug only");
+	puts("    -l <log-level> ... use `-l 5` to only log significant state changes, LOG_NOTICE & above");
+	puts("    -w <cmd> ... watch command is `exec xscreensaver-command --watch`");
+	puts("    -c <cmd> ... check command is `systemctl is-system-running`");
+	puts("    -s <cmd> ... suspend command is `exec systemctl suspend`");
+	puts("    -r <event> ... trigger event, default is `RUN 0 `");
 	puts("    -e ... also syslog to stderr");
 	exit(0);
 }
@@ -140,9 +149,13 @@ int usage()
 
 int main(int argc, char * argv[])
 {
-char watch_command[250];
 struct sigaction sa;
 int time_to_suspend = 60*30;
+
+	strcpy(suspend_command,SUSPEND_COMMAND);
+	strcpy(check_command,CHECK_COMMAND);
+	strcpy(watch_command,WATCH_COMMAND);
+	strcpy(trigger_event,TRIGGER_EVENT);
 
 	openlog("xscreensaver-suspend",LOG_PID,LOG_USER);
 
@@ -154,11 +167,14 @@ int time_to_suspend = 60*30;
 	strcpy(watch_command,"exec xscreensaver-command --watch");
 
     int opt;
-    while ((opt=getopt(argc,argv,"t:l:ew:")) > 0)
+    while ((opt=getopt(argc,argv,"t:l:ew:r:c:s:")) > 0)
         {
         switch(opt)
             {
-            case 'w': strcpy(watch_command,optarg); break;
+            case 'r': STRCPY(trigger_event,optarg); break;
+            case 'c': STRCPY(check_command,optarg); break;
+            case 's': STRCPY(suspend_command,optarg); break;
+            case 'w': STRCPY(watch_command,optarg); break;
             case 'l': LOG_UPTO(atoi(optarg)); break;
             case 't': time_to_suspend = atoi(optarg); break;
 			case 'e': openlog("xscreensaver-suspend",LOG_PID|LOG_PERROR,LOG_USER); break;
@@ -175,9 +191,9 @@ int time_to_suspend = 60*30;
 			if (pid==watch_pid) end_watcher();
 
 		if (!watch_pipe_fd) {
-			ret = system("systemctl is-system-running | logger -t xscreensaver-suspend -i");
+			ret = system(check_command);
 			if (ret >= 0) is_system_running++; else is_system_running=0;
-			syslog(LOG_DEBUG,"is-system-running %d of %d, ret=%d\n",is_system_running,NEED_SYSTEM_RUNNING,ret);
+			syslog(LOG_DEBUG,"check cmd %d of %d, ret=%d\n",is_system_running,NEED_SYSTEM_RUNNING,ret);
 
 			if (is_system_running >= NEED_SYSTEM_RUNNING) {
 				watch_pipe_fd = my_popen(watch_command);
@@ -201,7 +217,7 @@ int time_to_suspend = 60*30;
 		if (ret == 0) continue;
 		if (read_more() < 0) { end_watcher(); continue; }
 
-		if (have_run_zero()) {
+		if (check_trigger_event()) {
 			syslog(LOG_NOTICE,"suspend in %d secs",time_to_suspend);
 			supend_at = now+time_to_suspend;
 			}
