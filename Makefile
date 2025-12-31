@@ -15,3 +15,5 @@ clean:
 strip:
 	strip -p xscreensaver-suspend
 
+install: all strip
+	sudo install xscreensaver-suspend /usr/bin
