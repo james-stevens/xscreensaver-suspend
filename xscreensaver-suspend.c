@@ -186,6 +186,11 @@ int time_to_suspend = 60*30;
 		time_t now = time(NULL);
 		if ((supend_at)&&(now >= supend_at)) do_suspend();
 
+		if (time(NULL) > now+(MAX_TIME_GAP)) {
+			syslog(LOG_NOTICE,"External suspend suspected\n");
+			end_watcher();
+			}
+
 		pid_t pid; int ret;
 		while((pid=waitpid(-1,&ret,WNOHANG)) > 0)
 			if (pid==watch_pid) end_watcher();
@@ -208,13 +213,8 @@ int time_to_suspend = 60*30;
 
 		ret = read_poll(watch_pipe_fd,POLL_TIMEOUT);
 		if (ret < 0) { end_watcher(); continue; }
-
-		if (time(NULL) > now+(MAX_TIME_GAP)) {
-			syslog(LOG_NOTICE,"External suspend suspected\n");
-			end_watcher();
-			continue; }
-
 		if (ret == 0) continue;
+
 		if (read_more() < 0) { end_watcher(); continue; }
 
 		if (check_trigger_event()) {
