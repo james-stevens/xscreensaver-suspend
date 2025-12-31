@@ -55,6 +55,8 @@ All commands will be run in a shell `/bin/sh`, so any standard shell syntax shou
 To run it either configure your system to automatically start it when you login,
 or just start it in the background with `./xscreensaver-suspend &`.
 
+You can use the script `./debug.sh` as the watch command if you want to just play about.
+
 
 ## Build
 
