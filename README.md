@@ -32,7 +32,7 @@ Triggering on the event `UNBLANK ` can be used to take actions when the screen w
 
 For other events, check your `syslog`. I've seen `BLANK <date-time>`, `UNBLANK <date-time>` and `RUN <new-id> <old-id>`, where `RUN <num> ` is
 running your screen-saver and `RUN 0 ` is putting the screen into stand-by. So `RUN 0 214` was running screen-saver `214` and is now
-transitiioning to stand-by.
+transitioning to stand-by.
 
 If the PC is suspended by some other process, it tries to detect this and restart its watcher process
 as the watcher can lose its connection to `xscreensaver` after a suspend. It will always
