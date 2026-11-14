@@ -17,8 +17,9 @@
 #define CHECK_COMMAND "systemctl is-system-running | logger -t xscreensaver-suspend -i"
 #define WATCH_COMMAND "exec xscreensaver-command --watch"
 #define TRIGGER_EVENT "RUN 0 "
+#define UNTRIGGER_EVENT "\0"
 
-char suspend_command[250],check_command[250],watch_command[250],trigger_event[250];
+char suspend_command[250],check_command[250],watch_command[250],untrigger_event[250],trigger_event[250];
 
 #define ZERO(A) memset(&A,0,sizeof(A))
 
@@ -36,17 +37,17 @@ time_t supend_at = 0;
 char buf[MAXBUF],*end=buf;
 
 
-int check_trigger_event()
+int check_for_event(char * event)
 {
 int ret = 0;
-int len_trig = strlen(trigger_event);
+int len_trig = strlen(event);
 
 	if (end == buf) return 0;
 	char *nxt,*pos = buf;
 	while ((pos < end)&&((nxt = strchr(pos,'\n'))!=NULL)) {
 		*nxt = 0;
 		syslog(LOG_DEBUG,"xscreensaver reported '%s'",pos);
-		if (strncmp(pos,trigger_event,len_trig)==0) ret = 1; else ret = 0;
+		if (strncmp(pos,event,len_trig)==0) ret = 1; else ret = 0;
 		pos = nxt+1;
 		}
 
@@ -141,6 +142,7 @@ int usage()
 	puts("    -c <cmd> ... check command is `systemctl is-system-running`");
 	puts("    -s <cmd> ... suspend command is `exec systemctl suspend`");
 	puts("    -r <event> ... trigger event, default is `RUN 0 `");
+	puts("    -u <event> ... untrigger event, default is anything but the trigger event");
 	puts("    -e ... also syslog to stderr");
 	exit(0);
 }
@@ -156,6 +158,7 @@ int time_to_suspend = 60*30;
 	strcpy(check_command,CHECK_COMMAND);
 	strcpy(watch_command,WATCH_COMMAND);
 	strcpy(trigger_event,TRIGGER_EVENT);
+	strcpy(untrigger_event,UNTRIGGER_EVENT);
 
 	openlog("xscreensaver-suspend",LOG_PID,LOG_USER);
 
@@ -167,10 +170,11 @@ int time_to_suspend = 60*30;
 	strcpy(watch_command,"exec xscreensaver-command --watch");
 
     int opt;
-    while ((opt=getopt(argc,argv,"t:l:ew:r:c:s:")) > 0)
+    while ((opt=getopt(argc,argv,"t:l:ew:r:c:s:u:")) > 0)
         {
         switch(opt)
             {
+            case 'u': STRCPY(untrigger_event,optarg); break;
             case 'r': STRCPY(trigger_event,optarg); break;
             case 'c': STRCPY(check_command,optarg); break;
             case 's': STRCPY(suspend_command,optarg); break;
@@ -217,14 +221,18 @@ int time_to_suspend = 60*30;
 
 		if (read_more() < 0) { end_watcher(); continue; }
 
-		if (check_trigger_event()) {
+		if (check_for_event(trigger_event)) {
 			syslog(LOG_NOTICE,"suspend in %d secs",time_to_suspend);
 			supend_at = now+time_to_suspend;
 			}
 		else {
-			if (supend_at)
-				syslog(LOG_NOTICE,"suspend cancelled with %ld secs left",(supend_at - now));
-			supend_at = 0;
+			int do_untrigger=1;
+			if (untrigger_event[0]) do_untrigger = check_for_event(untrigger_event);
+			if (do_untrigger) {
+				if (supend_at)
+					syslog(LOG_NOTICE,"suspend cancelled with %ld secs left",(supend_at - now));
+				supend_at = 0;
+				}
 			}
 		}
 

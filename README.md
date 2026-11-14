@@ -47,6 +47,7 @@ xscreensaver-suspend &
     -c <cmd> ... check command is `systemctl is-system-running | logger -t xscreensaver-suspend -i`
     -s <cmd> ... suspend command is `exec systemctl suspend`
     -r <event> ... trigger event, default is `RUN 0 `
+    -u <event> ... untrigger event, default is anything but the trigger event
     -e ... also syslog to stderr
 ```
 
