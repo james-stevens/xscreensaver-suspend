@@ -36,7 +36,7 @@ int is_system_running = 0;
 
 int watch_pipe_fd = 0;
 pid_t watch_pid = 0;
-time_t supend_at = 0;
+time_t suspend_at = 0;
 
 #define MAXBUF 1000
 char buf[MAXBUF],*end=buf;
@@ -125,7 +125,8 @@ void end_watcher()
 	if (watch_pipe_fd) close(watch_pipe_fd);
 	watch_pipe_fd = 0;
 	is_system_running = 0;
-	supend_at = 0;
+	suspend_at = 0;
+	syslog(LOG_DEBUG,"state reset, is_system_running=%d, suspend_at=%ld\n",is_system_running,suspend_at);
 }
 
 
@@ -198,7 +199,7 @@ int time_to_suspend = 60*30;
 
 	while(!interupt) {
 		time_t now = time(NULL);
-		if ((supend_at)&&(now >= supend_at)) do_suspend();
+		if ((suspend_at)&&(now >= suspend_at)) do_suspend();
 
 		if (time(NULL) > now+(MAX_TIME_GAP)) {
 			syslog(LOG_NOTICE,"External suspend suspected\n");
@@ -234,15 +235,15 @@ int time_to_suspend = 60*30;
 		int this_event = check_for_event(trigger_event,untrigger_event);
 		if (this_event == EVENT_TRIGGER) {
 			syslog(LOG_NOTICE,"suspend in %d secs",time_to_suspend);
-			supend_at = now+time_to_suspend;
+			suspend_at = now+time_to_suspend;
 			}
 		else {
 			int do_untrigger=1;
 			if (untrigger_event[0]) do_untrigger = (this_event == EVENT_UNTRIGGER);
 			if (do_untrigger) {
-				if (supend_at)
-					syslog(LOG_NOTICE,"suspend cancelled with %ld secs left",(supend_at - now));
-				supend_at = 0;
+				if (suspend_at)
+					syslog(LOG_NOTICE,"suspend cancelled with %ld secs left",(suspend_at - now));
+				suspend_at = 0;
 				}
 			}
 		}
