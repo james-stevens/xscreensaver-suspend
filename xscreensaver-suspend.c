@@ -18,12 +18,17 @@
 #define WATCH_COMMAND "exec xscreensaver-command --watch"
 #define TRIGGER_EVENT "RUN 0 "
 #define UNTRIGGER_EVENT "\0"
+#define EVENT_NONE 0
+#define EVENT_TRIGGER 1
+#define EVENT_UNTRIGGER 2
 
 char suspend_command[250],check_command[250],watch_command[250],untrigger_event[250],trigger_event[250];
 
 #define ZERO(A) memset(&A,0,sizeof(A))
 
 #define POLL_TIMEOUT 10
+// if a loop cycles sees a difference in time more than MAX_TIME_GAP
+// since the last loop, assume the PC had been suspended & reset the pipe
 #define MAX_TIME_GAP (POLL_TIMEOUT*3)
 
 int is_system_running = 0;
@@ -37,17 +42,22 @@ time_t supend_at = 0;
 char buf[MAXBUF],*end=buf;
 
 
-int check_for_event(char * event)
+int check_for_event(char * trigger,char * untrigger)
 {
-int ret = 0;
-int len_trig = strlen(event);
+int ret = EVENT_NONE;
+int len_trig = strlen(trigger);
+int len_untrig = strlen(trigger);
 
 	if (end == buf) return 0;
 	char *nxt,*pos = buf;
 	while ((pos < end)&&((nxt = strchr(pos,'\n'))!=NULL)) {
 		*nxt = 0;
-		syslog(LOG_DEBUG,"xscreensaver reported '%s'",pos);
-		if (strncmp(pos,event,len_trig)==0) ret = 1; else ret = 0;
+		if (strncmp(pos,trigger,len_trig)==0) ret = EVENT_TRIGGER;
+		if ((len_untrig)&&(strncmp(pos,untrigger,len_untrig)==0)) ret = EVENT_UNTRIGGER;
+		if (len_untrig)
+			syslog(LOG_DEBUG,"xscreensaver reported '%s' - looking for '%s' or '%s' (%d)",pos,trigger,untrigger,ret);
+		else
+			syslog(LOG_DEBUG,"xscreensaver reported '%s' - looking for '%s' (%d)",pos,trigger,ret);
 		pos = nxt+1;
 		}
 
@@ -221,13 +231,14 @@ int time_to_suspend = 60*30;
 
 		if (read_more() < 0) { end_watcher(); continue; }
 
-		if (check_for_event(trigger_event)) {
+		int this_event = check_for_event(trigger_event,untrigger_event);
+		if (this_event == EVENT_TRIGGER) {
 			syslog(LOG_NOTICE,"suspend in %d secs",time_to_suspend);
 			supend_at = now+time_to_suspend;
 			}
 		else {
 			int do_untrigger=1;
-			if (untrigger_event[0]) do_untrigger = check_for_event(untrigger_event);
+			if (untrigger_event[0]) do_untrigger = (this_event == EVENT_UNTRIGGER);
 			if (do_untrigger) {
 				if (supend_at)
 					syslog(LOG_NOTICE,"suspend cancelled with %ld secs left",(supend_at - now));
